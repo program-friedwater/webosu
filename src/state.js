@@ -21,4 +21,10 @@ export const app = {
   logoPress: 0,
   rawInputEnabled: false,
   rawInputLocked: false,
+  beatmapBrowserOpen: false,
+  beatmapQuery: "freedom dive",
+  beatmapResults: [],
+  selectedRemoteBeatmap: 0,
+  beatmapBrowserStatus: "Mirror: Hinamizawa",
+  downloadedBeatmaps: [],
 };

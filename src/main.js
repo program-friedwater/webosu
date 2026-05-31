@@ -2,7 +2,12 @@ import { createInput } from "./systems/input.js";
 import { createRenderer } from "./systems/renderer.js";
 import { app, pointer } from "./state.js";
 import { drawStartScene, logoHitTest } from "./scenes/startScene.js";
-import { drawSongSelectScene, handleSongSelectPointerUp, handleSongSelectWheel } from "./scenes/songSelectScene.js";
+import {
+  drawSongSelectScene,
+  handleSongSelectKeyDown,
+  handleSongSelectPointerUp,
+  handleSongSelectWheel,
+} from "./scenes/songSelectScene.js";
 import { approach } from "./utils/math.js";
 
 const canvas = document.querySelector("#game");
@@ -75,6 +80,10 @@ function update(dt) {
     logoHover: app.logoHover,
     rawInputEnabled: app.rawInputEnabled,
     rawInputLocked: app.rawInputLocked,
+    beatmapBrowserOpen: app.beatmapBrowserOpen,
+    beatmapQuery: app.beatmapQuery,
+    beatmapResults: app.beatmapResults.length,
+    downloadedBeatmaps: app.downloadedBeatmaps.length,
   };
 }
 
@@ -99,7 +108,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-canvas.addEventListener("pointerup", (event) => {
+canvas.addEventListener("pointerup", async (event) => {
   input.updatePointerFromEvent(event);
   pointer.down = false;
 
@@ -109,7 +118,13 @@ canvas.addEventListener("pointerup", (event) => {
   }
 
   if (app.scene === "songSelect") {
-    handleSongSelectPointerUp(pointer, app, setScene, () => input.toggleRawInput());
+    await handleSongSelectPointerUp(pointer, app, setScene, () => input.toggleRawInput());
+  }
+});
+
+window.addEventListener("keydown", (event) => {
+  if (handleSongSelectKeyDown(event, app)) {
+    event.preventDefault();
   }
 });
 
