@@ -1,0 +1,38 @@
+export const songs = [
+  {
+    title: "cyanotype skyline",
+    artist: "mizosu project",
+    mapper: "agemizu",
+    version: "insane",
+    bpm: 174,
+    length: "02:11",
+    stats: "AR 9.2  OD 8.5  CS 4.0  HP 6.5",
+  },
+  {
+    title: "afterimage circuit",
+    artist: "stable lab",
+    mapper: "canvas",
+    version: "hard",
+    bpm: 152,
+    length: "01:48",
+    stats: "AR 8.0  OD 7.2  CS 4.0  HP 5.0",
+  },
+  {
+    title: "moonlit latency",
+    artist: "web audio",
+    mapper: "prototype",
+    version: "normal",
+    bpm: 128,
+    length: "02:34",
+    stats: "AR 6.5  OD 6.0  CS 3.8  HP 4.0",
+  },
+  {
+    title: "glass cursor",
+    artist: "single canvas",
+    mapper: "runtime",
+    version: "expert",
+    bpm: 190,
+    length: "02:02",
+    stats: "AR 9.6  OD 8.8  CS 4.2  HP 7.0",
+  },
+];
