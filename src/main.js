@@ -1,5 +1,6 @@
 import { createInput } from "./systems/input.js";
 import { createRenderer } from "./systems/renderer.js";
+import { createBeatmapTextInput } from "./systems/textInput.js";
 import { app, pointer } from "./state.js";
 import { drawStartScene, logoHitTest } from "./scenes/startScene.js";
 import {
@@ -14,6 +15,7 @@ const canvas = document.querySelector("#game");
 const ctx = canvas.getContext("2d");
 const renderer = createRenderer(canvas, ctx);
 const input = createInput(canvas, pointer, app, renderer);
+const textInput = createBeatmapTextInput(app);
 
 function setScene(scene) {
   app.targetScene = scene;
@@ -118,13 +120,22 @@ canvas.addEventListener("pointerup", async (event) => {
   }
 
   if (app.scene === "songSelect") {
-    await handleSongSelectPointerUp(pointer, app, setScene, () => input.toggleRawInput());
+    await handleSongSelectPointerUp(
+      pointer,
+      app,
+      setScene,
+      () => input.toggleRawInput(),
+      () => textInput.focusBeatmapSearch(),
+    );
   }
 });
 
 window.addEventListener("keydown", (event) => {
   if (handleSongSelectKeyDown(event, app)) {
     event.preventDefault();
+    if (!app.beatmapBrowserOpen) {
+      textInput.blurBeatmapSearch();
+    }
   }
 });
 

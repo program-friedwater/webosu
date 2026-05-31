@@ -37,9 +37,9 @@ export function drawSongSelectScene(ctx, app, pointer) {
   drawBeatmapBrowser(ctx, app, pointer);
 }
 
-export async function handleSongSelectPointerUp(pointer, app, setScene, toggleRawInput) {
+export async function handleSongSelectPointerUp(pointer, app, setScene, toggleRawInput, focusBeatmapSearch) {
   if (app.beatmapBrowserOpen) {
-    await handleBeatmapBrowserPointerUp(pointer, app);
+    await handleBeatmapBrowserPointerUp(pointer, app, focusBeatmapSearch);
     return;
   }
 
@@ -55,6 +55,7 @@ export async function handleSongSelectPointerUp(pointer, app, setScene, toggleRa
     if (app.beatmapResults.length === 0) {
       await runMirrorSearch(app);
     }
+    focusBeatmapSearch();
     return;
   }
 
@@ -113,6 +114,10 @@ export function handleSongSelectKeyDown(event, app) {
   if (event.key === "Enter") {
     runMirrorSearch(app);
     return true;
+  }
+
+  if (event.target?.dataset?.mizosuTextInput === "beatmap-search") {
+    return false;
   }
 
   if (event.key === "Backspace") {
@@ -272,13 +277,19 @@ function formatMods(app) {
   return Array.from(app.activeMods).join("");
 }
 
-async function handleBeatmapBrowserPointerUp(pointer, app) {
+async function handleBeatmapBrowserPointerUp(pointer, app, focusBeatmapSearch) {
   if (hitRect(browserRects.close, pointer.x, pointer.y)) {
     app.beatmapBrowserOpen = false;
     return;
   }
 
+  if (hitRect(browserRects.query, pointer.x, pointer.y)) {
+    focusBeatmapSearch();
+    return;
+  }
+
   if (hitRect(browserRects.search, pointer.x, pointer.y)) {
+    focusBeatmapSearch();
     await runMirrorSearch(app);
     return;
   }
