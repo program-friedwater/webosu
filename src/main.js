@@ -21,6 +21,8 @@ const app = {
   selectedSong: 1,
   modsOpen: false,
   activeMods: new Set(),
+  logoHover: 0,
+  logoPress: 0,
 };
 
 const bottomButtons = {
@@ -126,6 +128,10 @@ function hitRect(rect, x, y) {
   return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
 }
 
+function approach(current, target, dt, speed) {
+  return current + (target - current) * (1 - Math.exp(-speed * dt / 1000));
+}
+
 function updateTransition(dt) {
   if (app.transition <= 0) {
     return;
@@ -142,14 +148,15 @@ function updateTransition(dt) {
 }
 
 function logoMetrics() {
-  const hover = logoHitTest(pointer.x, pointer.y);
-  const pulse = Math.sin(app.time * 0.003) * 5;
-  const press = pointer.down && hover ? -8 : 0;
+  const pulse = Math.sin(app.time * 0.003) * 3.5;
+  const hover = app.logoHover;
+  const press = app.logoPress;
   return {
     x: LOGICAL_WIDTH / 2,
     y: LOGICAL_HEIGHT / 2 - 12,
-    radius: 132 + pulse + (hover ? 18 : 0) + press,
+    radius: 132 + pulse + hover * 22 - press * 9,
     hover,
+    press,
   };
 }
 
@@ -162,7 +169,8 @@ function logoHitTest(x, y) {
 function drawStartScene() {
   drawStableBackground("#11121f", "#3d294c");
 
-  const orbitAlpha = 0.16 + Math.sin(app.time * 0.002) * 0.04;
+  const logo = logoMetrics();
+  const orbitAlpha = 0.1 + logo.hover * 0.12 + Math.sin(app.time * 0.002) * 0.025;
   ctx.save();
   ctx.globalAlpha = orbitAlpha;
   ctx.strokeStyle = "#ffffff";
@@ -170,11 +178,11 @@ function drawStartScene() {
   for (let i = 0; i < 5; i += 1) {
     ctx.beginPath();
     ctx.ellipse(
-      LOGICAL_WIDTH / 2,
-      LOGICAL_HEIGHT / 2 - 10,
-      190 + i * 22,
-      190 + i * 22,
-      app.time * 0.0002 + i * 0.2,
+      logo.x,
+      logo.y,
+      185 + i * 22 + logo.hover * 13,
+      185 + i * 22 + logo.hover * 13,
+      app.time * 0.00026 + i * 0.22,
       0,
       Math.PI * 2,
     );
@@ -188,32 +196,33 @@ function drawStartScene() {
 
 function drawMizosuLogo() {
   const logo = logoMetrics();
-  const glow = ctx.createRadialGradient(logo.x, logo.y, 30, logo.x, logo.y, logo.radius + 78);
-  glow.addColorStop(0, "rgba(255, 118, 204, 0.64)");
-  glow.addColorStop(0.46, "rgba(104, 207, 255, 0.2)");
+  const glow = ctx.createRadialGradient(logo.x, logo.y, 28, logo.x, logo.y, logo.radius + 110);
+  glow.addColorStop(0, `rgba(255, 119, 211, ${0.58 + logo.hover * 0.18})`);
+  glow.addColorStop(0.44, `rgba(109, 216, 255, ${0.18 + logo.hover * 0.16})`);
   glow.addColorStop(1, "rgba(10, 12, 18, 0)");
 
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(logo.x, logo.y, logo.radius + 90, 0, Math.PI * 2);
+  ctx.arc(logo.x, logo.y, logo.radius + 116, 0, Math.PI * 2);
   ctx.fill();
 
   const face = ctx.createRadialGradient(
-    logo.x - logo.radius * 0.22,
-    logo.y - logo.radius * 0.34,
-    logo.radius * 0.08,
+    logo.x - logo.radius * 0.28,
+    logo.y - logo.radius * 0.38,
+    logo.radius * 0.05,
     logo.x,
     logo.y,
     logo.radius,
   );
-  face.addColorStop(0, "#ffe4fb");
-  face.addColorStop(0.22, "#ff85d5");
-  face.addColorStop(0.64, "#d340a7");
-  face.addColorStop(1, "#8f2b80");
+  face.addColorStop(0, "#ffffff");
+  face.addColorStop(0.13, "#ffd3f4");
+  face.addColorStop(0.36, "#ff6fc7");
+  face.addColorStop(0.72, "#c92c92");
+  face.addColorStop(1, "#70246f");
 
   ctx.save();
-  ctx.shadowColor = "rgba(255, 90, 202, 0.75)";
-  ctx.shadowBlur = logo.hover ? 44 : 28;
+  ctx.shadowColor = "rgba(255, 91, 205, 0.8)";
+  ctx.shadowBlur = 30 + logo.hover * 28;
   ctx.fillStyle = face;
   ctx.beginPath();
   ctx.arc(logo.x, logo.y, logo.radius, 0, Math.PI * 2);
@@ -221,30 +230,61 @@ function drawMizosuLogo() {
   ctx.restore();
 
   ctx.save();
-  ctx.lineWidth = 9;
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.82)";
+  ctx.lineWidth = 11;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.88)";
   ctx.beginPath();
-  ctx.arc(logo.x, logo.y, logo.radius - 9, 0, Math.PI * 2);
+  ctx.arc(logo.x, logo.y, logo.radius - 8, 0, Math.PI * 2);
   ctx.stroke();
 
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = "rgba(125, 231, 255, 0.55)";
   ctx.beginPath();
-  ctx.arc(logo.x, logo.y, logo.radius + 14, 0, Math.PI * 2);
+  ctx.arc(logo.x, logo.y, logo.radius + 12, -0.08 * Math.PI, 0.68 * Math.PI);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(255, 170, 229, 0.66)";
+  ctx.beginPath();
+  ctx.arc(logo.x, logo.y, logo.radius + 21, 0.95 * Math.PI, 1.83 * Math.PI);
   ctx.stroke();
   ctx.restore();
 
   ctx.save();
+  ctx.globalAlpha = 0.5 + logo.hover * 0.18;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.42)";
+  ctx.beginPath();
+  ctx.ellipse(
+    logo.x - logo.radius * 0.28,
+    logo.y - logo.radius * 0.36,
+    logo.radius * 0.31,
+    logo.radius * 0.16,
+    -0.58,
+    0,
+    Math.PI * 2,
+  );
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha = 0.14;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(logo.x + logo.radius * 0.32, logo.y + logo.radius * 0.28, logo.radius * 0.32, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(logo.x, logo.y);
+  ctx.scale(1 + logo.hover * 0.035 - logo.press * 0.015, 1 + logo.hover * 0.035 - logo.press * 0.015);
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "900 61px Helvetica Neue, Arial, sans-serif";
-  ctx.shadowColor = "rgba(80, 12, 70, 0.62)";
-  ctx.shadowBlur = 10;
-  ctx.fillText("mizosu!", logo.x, logo.y - 8);
-  ctx.font = "700 17px Helvetica Neue, Arial, sans-serif";
-  ctx.globalAlpha = 0.88;
-  ctx.fillText("click to enter", logo.x, logo.y + 56);
+  ctx.font = "900 64px Helvetica Neue, Arial, sans-serif";
+  ctx.shadowColor = "rgba(64, 8, 58, 0.68)";
+  ctx.shadowBlur = 12;
+  ctx.fillText("mizosu!", 0, -7);
+  ctx.font = "800 15px Helvetica Neue, Arial, sans-serif";
+  ctx.globalAlpha = 0.78 + logo.hover * 0.18;
+  ctx.fillText(logo.hover > 0.5 ? "let's play" : "click to enter", 0, 54);
   ctx.restore();
 }
 
@@ -492,12 +532,17 @@ function roundRect(x, y, w, h, r) {
 
 function update(dt) {
   app.time += dt;
+  const logoHovered = app.scene === "start" && logoHitTest(pointer.x, pointer.y);
+  const logoPressed = logoHovered && pointer.down;
+  app.logoHover = approach(app.logoHover, logoHovered ? 1 : 0, dt, logoHovered ? 11 : 8);
+  app.logoPress = approach(app.logoPress, logoPressed ? 1 : 0, dt, logoPressed ? 18 : 14);
   updateTransition(dt);
   window.__mizosuState = {
     scene: app.scene,
     modsOpen: app.modsOpen,
     activeMods: Array.from(app.activeMods),
     selectedSong: app.selectedSong,
+    logoHover: app.logoHover,
   };
 }
 
