@@ -196,33 +196,23 @@ function drawStartScene() {
 
 function drawMizosuLogo() {
   const logo = logoMetrics();
-  const glow = ctx.createRadialGradient(logo.x, logo.y, 28, logo.x, logo.y, logo.radius + 110);
-  glow.addColorStop(0, `rgba(255, 119, 211, ${0.58 + logo.hover * 0.18})`);
-  glow.addColorStop(0.44, `rgba(109, 216, 255, ${0.18 + logo.hover * 0.16})`);
+  const glow = ctx.createRadialGradient(logo.x, logo.y, 40, logo.x, logo.y, logo.radius + 96);
+  glow.addColorStop(0, `rgba(255, 112, 205, ${0.34 + logo.hover * 0.12})`);
+  glow.addColorStop(0.52, `rgba(255, 112, 205, ${0.1 + logo.hover * 0.08})`);
   glow.addColorStop(1, "rgba(10, 12, 18, 0)");
 
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(logo.x, logo.y, logo.radius + 116, 0, Math.PI * 2);
+  ctx.arc(logo.x, logo.y, logo.radius + 98, 0, Math.PI * 2);
   ctx.fill();
 
-  const face = ctx.createRadialGradient(
-    logo.x - logo.radius * 0.28,
-    logo.y - logo.radius * 0.38,
-    logo.radius * 0.05,
-    logo.x,
-    logo.y,
-    logo.radius,
-  );
-  face.addColorStop(0, "#ffffff");
-  face.addColorStop(0.13, "#ffd3f4");
-  face.addColorStop(0.36, "#ff6fc7");
-  face.addColorStop(0.72, "#c92c92");
-  face.addColorStop(1, "#70246f");
+  const face = ctx.createLinearGradient(logo.x, logo.y - logo.radius, logo.x, logo.y + logo.radius);
+  face.addColorStop(0, "#f257b8");
+  face.addColorStop(1, "#b32f91");
 
   ctx.save();
-  ctx.shadowColor = "rgba(255, 91, 205, 0.8)";
-  ctx.shadowBlur = 30 + logo.hover * 28;
+  ctx.shadowColor = "rgba(255, 91, 205, 0.52)";
+  ctx.shadowBlur = 20 + logo.hover * 18;
   ctx.fillStyle = face;
   ctx.beginPath();
   ctx.arc(logo.x, logo.y, logo.radius, 0, Math.PI * 2);
@@ -230,46 +220,17 @@ function drawMizosuLogo() {
   ctx.restore();
 
   ctx.save();
-  ctx.lineWidth = 11;
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.88)";
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.84)";
   ctx.beginPath();
   ctx.arc(logo.x, logo.y, logo.radius - 8, 0, Math.PI * 2);
   ctx.stroke();
 
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = "rgba(125, 231, 255, 0.55)";
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.32)";
   ctx.beginPath();
-  ctx.arc(logo.x, logo.y, logo.radius + 12, -0.08 * Math.PI, 0.68 * Math.PI);
+  ctx.arc(logo.x, logo.y, logo.radius + 13, 0, Math.PI * 2);
   ctx.stroke();
-
-  ctx.strokeStyle = "rgba(255, 170, 229, 0.66)";
-  ctx.beginPath();
-  ctx.arc(logo.x, logo.y, logo.radius + 21, 0.95 * Math.PI, 1.83 * Math.PI);
-  ctx.stroke();
-  ctx.restore();
-
-  ctx.save();
-  ctx.globalAlpha = 0.5 + logo.hover * 0.18;
-  ctx.fillStyle = "rgba(255, 255, 255, 0.42)";
-  ctx.beginPath();
-  ctx.ellipse(
-    logo.x - logo.radius * 0.28,
-    logo.y - logo.radius * 0.36,
-    logo.radius * 0.31,
-    logo.radius * 0.16,
-    -0.58,
-    0,
-    Math.PI * 2,
-  );
-  ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  ctx.globalAlpha = 0.14;
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(logo.x + logo.radius * 0.32, logo.y + logo.radius * 0.28, logo.radius * 0.32, 0, Math.PI * 2);
-  ctx.fill();
   ctx.restore();
 
   ctx.save();
@@ -280,7 +241,7 @@ function drawMizosuLogo() {
   ctx.textBaseline = "middle";
   ctx.font = "900 64px Helvetica Neue, Arial, sans-serif";
   ctx.shadowColor = "rgba(64, 8, 58, 0.68)";
-  ctx.shadowBlur = 12;
+  ctx.shadowBlur = 8;
   ctx.fillText("mizosu!", 0, -7);
   ctx.font = "800 15px Helvetica Neue, Arial, sans-serif";
   ctx.globalAlpha = 0.78 + logo.hover * 0.18;
