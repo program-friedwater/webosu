@@ -8,17 +8,16 @@ const bottomButtons = {
   back: { x: 34, y: LOGICAL_HEIGHT - 65, w: 136, h: 44 },
   mods: { x: 188, y: LOGICAL_HEIGHT - 65, w: 136, h: 44 },
   rawInput: { x: 342, y: LOGICAL_HEIGHT - 65, w: 174, h: 44 },
-  getMaps: { x: 534, y: LOGICAL_HEIGHT - 65, w: 154, h: 44 },
+  download: { x: 534, y: LOGICAL_HEIGHT - 65, w: 174, h: 44 },
   start: { x: LOGICAL_WIDTH - 228, y: LOGICAL_HEIGHT - 69, w: 194, h: 52 },
 };
 
-const browserRects = {
-  panel: { x: 116, y: 92, w: 1134, h: 584 },
-  query: { x: 156, y: 160, w: 620, h: 52 },
-  search: { x: 794, y: 160, w: 140, h: 52 },
-  close: { x: 1120, y: 118, w: 90, h: 42 },
-  download: { x: 982, y: 586, w: 208, h: 54 },
+const searchControls = {
+  query: { x: LOGICAL_WIDTH - 688, y: 20, w: 438, h: 38 },
+  search: { x: LOGICAL_WIDTH - 236, y: 20, w: 92, h: 38 },
 };
+
+const detailDownload = { x: 70, y: 374, w: 210, h: 44 };
 
 const modButtons = [
   { code: "HD", name: "Hidden", x: 72, y: LOGICAL_HEIGHT - 276, w: 118, h: 58 },
@@ -29,33 +28,28 @@ const modButtons = [
 
 export function drawSongSelectScene(ctx, app, pointer) {
   drawStableBackground(ctx, app, "#141522", "#253e48");
-  drawTopBar(ctx);
+  drawTopBar(ctx, app, pointer);
   drawSongList(ctx, app, pointer);
-  drawSongDetails(ctx, app);
+  drawSongDetails(ctx, app, pointer);
   drawModsPanel(ctx, app, pointer);
   drawBottomBar(ctx, app, pointer);
-  drawBeatmapBrowser(ctx, app, pointer);
 }
 
 export async function handleSongSelectPointerUp(pointer, app, setScene, toggleRawInput, focusBeatmapSearch) {
-  if (app.beatmapBrowserOpen) {
-    await handleBeatmapBrowserPointerUp(pointer, app, focusBeatmapSearch);
+  if (hitRect(searchControls.query, pointer.x, pointer.y)) {
+    focusBeatmapSearch();
+    return;
+  }
+
+  if (hitRect(searchControls.search, pointer.x, pointer.y)) {
+    focusBeatmapSearch();
+    await runMirrorSearch(app);
     return;
   }
 
   if (hitRect(bottomButtons.back, pointer.x, pointer.y)) {
     app.modsOpen = false;
     setScene("start");
-    return;
-  }
-
-  if (hitRect(bottomButtons.getMaps, pointer.x, pointer.y)) {
-    app.modsOpen = false;
-    app.beatmapBrowserOpen = true;
-    if (app.beatmapResults.length === 0) {
-      await runMirrorSearch(app);
-    }
-    focusBeatmapSearch();
     return;
   }
 
@@ -66,6 +60,11 @@ export async function handleSongSelectPointerUp(pointer, app, setScene, toggleRa
 
   if (hitRect(bottomButtons.rawInput, pointer.x, pointer.y)) {
     toggleRawInput();
+    return;
+  }
+
+  if (hitRect(bottomButtons.download, pointer.x, pointer.y) || hitRect(detailDownload, pointer.x, pointer.y)) {
+    await downloadSelectedBeatmap(app);
     return;
   }
 
@@ -82,15 +81,16 @@ export async function handleSongSelectPointerUp(pointer, app, setScene, toggleRa
     }
   }
 
-  const listX = LOGICAL_WIDTH - 525;
-  const listY = 105;
-  const rowHeight = 88;
-  songs.forEach((_, index) => {
-    const rowY = listY + index * (rowHeight + 13) - app.songScroll;
-    if (pointer.x >= listX - 8 && pointer.x <= listX + 456 && pointer.y >= rowY && pointer.y <= rowY + rowHeight) {
-      app.selectedSong = index;
-    }
-  });
+  const resultIndex = songRowIndexAt(pointer.x, pointer.y, app);
+  if (resultIndex < 0) {
+    return;
+  }
+
+  if (hasRemoteResults(app)) {
+    app.selectedRemoteBeatmap = resultIndex;
+  } else {
+    app.selectedSong = resultIndex;
+  }
 }
 
 export function handleSongSelectWheel(event, app) {
@@ -102,13 +102,8 @@ export function handleSongSelectWheel(event, app) {
 }
 
 export function handleSongSelectKeyDown(event, app) {
-  if (app.scene !== "songSelect" || !app.beatmapBrowserOpen) {
+  if (app.scene !== "songSelect") {
     return false;
-  }
-
-  if (event.key === "Escape") {
-    app.beatmapBrowserOpen = false;
-    return true;
   }
 
   if (event.key === "Enter") {
@@ -116,24 +111,14 @@ export function handleSongSelectKeyDown(event, app) {
     return true;
   }
 
-  if (event.target?.dataset?.mizosuTextInput === "beatmap-search") {
-    return false;
-  }
-
-  if (event.key === "Backspace") {
-    app.beatmapQuery = app.beatmapQuery.slice(0, -1);
-    return true;
-  }
-
-  if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
-    app.beatmapQuery = `${app.beatmapQuery}${event.key}`.slice(0, 72);
+  if (event.key === "Escape") {
     return true;
   }
 
   return false;
 }
 
-function drawTopBar(ctx) {
+function drawTopBar(ctx, app, pointer) {
   ctx.fillStyle = "rgba(7, 8, 14, 0.56)";
   ctx.fillRect(0, 0, LOGICAL_WIDTH, 78);
   ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
@@ -141,7 +126,10 @@ function drawTopBar(ctx) {
   ctx.fillText("Song Select", 34, 47);
   ctx.font = "700 15px Helvetica Neue, Arial, sans-serif";
   ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-  ctx.fillText("Group: All Songs    Sort: Title    Search: type to search", 34, 69);
+  ctx.fillText(statusLine(app), 34, 69);
+
+  drawSearchInput(ctx, app, pointer);
+  drawPill(ctx, searchControls.search, "Search", pointer);
 
   ctx.textAlign = "right";
   ctx.font = "800 25px Helvetica Neue, Arial, sans-serif";
@@ -150,19 +138,32 @@ function drawTopBar(ctx) {
   ctx.textAlign = "left";
 }
 
+function drawSearchInput(ctx, app, pointer) {
+  const hover = hitRect(searchControls.query, pointer.x, pointer.y);
+  ctx.fillStyle = hover ? "rgba(255, 255, 255, 0.18)" : "rgba(255, 255, 255, 0.12)";
+  roundRect(ctx, searchControls.query.x, searchControls.query.y, searchControls.query.w, searchControls.query.h, 8);
+  ctx.fill();
+
+  ctx.fillStyle = app.beatmapQuery ? "#ffffff" : "rgba(255, 255, 255, 0.46)";
+  ctx.font = "800 18px Helvetica Neue, Arial, sans-serif";
+  ctx.fillText(app.beatmapQuery || "Search ranked osu!std maps...", searchControls.query.x + 16, searchControls.query.y + 25, searchControls.query.w - 32);
+}
+
 function drawSongList(ctx, app, pointer) {
   const x = LOGICAL_WIDTH - 525;
   const y = 105;
   const rowHeight = 88;
+  const remote = hasRemoteResults(app);
+  const list = remote ? app.beatmapResults.slice(0, 5) : songs;
 
   ctx.save();
   ctx.fillStyle = "rgba(8, 9, 17, 0.5)";
   roundRect(ctx, x - 20, y - 18, 490, 552, 8);
   ctx.fill();
 
-  songs.forEach((song, index) => {
+  list.forEach((item, index) => {
     const rowY = y + index * (rowHeight + 13) - app.songScroll;
-    const selected = index === app.selectedSong;
+    const selected = remote ? index === app.selectedRemoteBeatmap : index === app.selectedSong;
     const hover = pointer.x >= x - 8 && pointer.x <= x + 456 && pointer.y >= rowY && pointer.y <= rowY + rowHeight;
 
     ctx.fillStyle = selected
@@ -177,45 +178,66 @@ function drawSongList(ctx, app, pointer) {
     roundRect(ctx, x + 14, rowY + 15, 58, 58, 6);
     ctx.fill();
 
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "800 23px Helvetica Neue, Arial, sans-serif";
-    ctx.fillText(song.title, x + 88, rowY + 33);
-    ctx.font = "600 15px Helvetica Neue, Arial, sans-serif";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.76)";
-    ctx.fillText(`${song.artist} // ${song.mapper}`, x + 88, rowY + 57);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.58)";
-    ctx.fillText(song.version, x + 88, rowY + 77);
+    drawSongRowText(ctx, item, remote, x, rowY);
   });
   ctx.restore();
 }
 
-function drawSongDetails(ctx, app) {
-  const song = songs[app.selectedSong];
+function drawSongRowText(ctx, item, remote, x, rowY) {
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 23px Helvetica Neue, Arial, sans-serif";
+  ctx.fillText(remote ? item.title : item.title, x + 88, rowY + 33, 340);
+  ctx.font = "600 15px Helvetica Neue, Arial, sans-serif";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.76)";
+  ctx.fillText(remote ? `${item.artist} // ${item.creator}` : `${item.artist} // ${item.mapper}`, x + 88, rowY + 57, 340);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.58)";
+  ctx.fillText(remote ? `ranked osu!std // set ${item.setId}` : item.version, x + 88, rowY + 77, 340);
+}
+
+function drawSongDetails(ctx, app, pointer) {
+  const remote = hasRemoteResults(app);
+  const song = remote ? app.beatmapResults[app.selectedRemoteBeatmap] : songs[app.selectedSong];
   const x = 42;
   const y = 118;
 
   ctx.save();
   ctx.fillStyle = "rgba(7, 8, 14, 0.44)";
-  roundRect(ctx, x, y, 590, 268, 8);
+  roundRect(ctx, x, y, 620, 292, 8);
   ctx.fill();
 
+  if (!song) {
+    ctx.fillStyle = "rgba(255, 255, 255, 0.68)";
+    ctx.font = "800 24px Helvetica Neue, Arial, sans-serif";
+    ctx.fillText("Search ranked osu!std maps", x + 26, y + 62);
+    ctx.restore();
+    return;
+  }
+
   ctx.fillStyle = "#ffffff";
-  ctx.font = "900 43px Helvetica Neue, Arial, sans-serif";
-  ctx.fillText(song.title, x + 26, y + 62);
+  ctx.font = "900 40px Helvetica Neue, Arial, sans-serif";
+  ctx.fillText(song.title, x + 26, y + 62, 560);
   ctx.font = "700 24px Helvetica Neue, Arial, sans-serif";
   ctx.fillStyle = "rgba(255, 255, 255, 0.74)";
-  ctx.fillText(song.artist, x + 28, y + 98);
+  ctx.fillText(song.artist, x + 28, y + 98, 560);
 
   ctx.font = "700 18px Helvetica Neue, Arial, sans-serif";
   ctx.fillStyle = "rgba(255, 255, 255, 0.62)";
-  ctx.fillText(`mapped by ${song.mapper}`, x + 28, y + 134);
-  ctx.fillText(`[${song.version}]`, x + 28, y + 162);
-  ctx.fillText(`${song.bpm} BPM    ${song.length}`, x + 28, y + 202);
-  ctx.fillText(song.stats, x + 28, y + 230);
-
-  ctx.fillStyle = "rgba(255, 120, 210, 0.78)";
-  roundRect(ctx, x + 28, y + 242, 280, 7, 5);
-  ctx.fill();
+  if (remote) {
+    ctx.fillText(`mapped by ${song.creator}`, x + 28, y + 134, 560);
+    ctx.fillText(`Set ID: ${song.setId}`, x + 28, y + 162);
+    ctx.fillText(`Difficulties: ${song.difficultyCount || "unknown"}`, x + 28, y + 190);
+    ctx.fillText(`Stars: ${formatStars(song)}`, x + 28, y + 218);
+    ctx.fillText(`BPM: ${song.bpm ?? "unknown"}`, x + 28, y + 246);
+    drawPill(ctx, detailDownload, "Download .osz", pointer);
+  } else {
+    ctx.fillText(`mapped by ${song.mapper}`, x + 28, y + 134);
+    ctx.fillText(`[${song.version}]`, x + 28, y + 162);
+    ctx.fillText(`${song.bpm} BPM    ${song.length}`, x + 28, y + 202);
+    ctx.fillText(song.stats, x + 28, y + 230);
+    ctx.fillStyle = "rgba(255, 120, 210, 0.78)";
+    roundRect(ctx, x + 28, y + 242, 280, 7, 5);
+    ctx.fill();
+  }
   ctx.restore();
 }
 
@@ -225,7 +247,7 @@ function drawBottomBar(ctx, app, pointer) {
   drawPill(ctx, bottomButtons.back, "Back", pointer);
   drawPill(ctx, bottomButtons.mods, app.activeMods.size > 0 ? `Mods ${formatMods(app)}` : "Mods", pointer, app.modsOpen);
   drawPill(ctx, bottomButtons.rawInput, app.rawInputLocked ? "Raw Input *" : `Raw Input ${app.rawInputEnabled ? "On" : "Off"}`, pointer, app.rawInputEnabled);
-  drawPill(ctx, bottomButtons.getMaps, "Get Maps", pointer, app.beatmapBrowserOpen);
+  drawPill(ctx, bottomButtons.download, "Download", pointer, hasRemoteResults(app));
   drawPill(ctx, bottomButtons.start, "Start", pointer);
 }
 
@@ -273,42 +295,11 @@ function drawModsPanel(ctx, app, pointer) {
   ctx.restore();
 }
 
-function formatMods(app) {
-  return Array.from(app.activeMods).join("");
-}
-
-async function handleBeatmapBrowserPointerUp(pointer, app, focusBeatmapSearch) {
-  if (hitRect(browserRects.close, pointer.x, pointer.y)) {
-    app.beatmapBrowserOpen = false;
-    return;
-  }
-
-  if (hitRect(browserRects.query, pointer.x, pointer.y)) {
-    focusBeatmapSearch();
-    return;
-  }
-
-  if (hitRect(browserRects.search, pointer.x, pointer.y)) {
-    focusBeatmapSearch();
-    await runMirrorSearch(app);
-    return;
-  }
-
-  if (hitRect(browserRects.download, pointer.x, pointer.y)) {
-    await downloadSelectedBeatmap(app);
-    return;
-  }
-
-  const resultIndex = resultIndexAt(pointer.x, pointer.y);
-  if (resultIndex >= 0 && resultIndex < app.beatmapResults.length) {
-    app.selectedRemoteBeatmap = resultIndex;
-  }
-}
-
 async function runMirrorSearch(app) {
   const query = app.beatmapQuery.trim();
   if (!query) {
     app.beatmapBrowserStatus = "Type a query first";
+    app.beatmapResults = [];
     return;
   }
 
@@ -316,6 +307,7 @@ async function runMirrorSearch(app) {
   try {
     app.beatmapResults = await searchMirrorBeatmaps(query);
     app.selectedRemoteBeatmap = 0;
+    app.songScroll = 0;
     app.beatmapBrowserStatus = app.beatmapResults.length
       ? `${app.beatmapResults.length} ranked osu!std results from mirror`
       : "No mirror results";
@@ -328,7 +320,7 @@ async function runMirrorSearch(app) {
 async function downloadSelectedBeatmap(app) {
   const beatmap = app.beatmapResults[app.selectedRemoteBeatmap];
   if (!beatmap) {
-    app.beatmapBrowserStatus = "Select a beatmap first";
+    app.beatmapBrowserStatus = "Select a mirror result first";
     return;
   }
 
@@ -349,123 +341,35 @@ async function downloadSelectedBeatmap(app) {
   }
 }
 
-function drawBeatmapBrowser(ctx, app, pointer) {
-  if (!app.beatmapBrowserOpen) {
-    return;
-  }
-
-  ctx.save();
-  ctx.fillStyle = "rgba(0, 0, 0, 0.58)";
-  ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
-
-  ctx.fillStyle = "rgba(9, 10, 18, 0.94)";
-  roundRect(ctx, browserRects.panel.x, browserRects.panel.y, browserRects.panel.w, browserRects.panel.h, 8);
-  ctx.fill();
-
-  ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
-  ctx.font = "900 32px Helvetica Neue, Arial, sans-serif";
-  ctx.fillText("Get Maps", 156, 132);
-  ctx.font = "700 14px Helvetica Neue, Arial, sans-serif";
-  ctx.fillStyle = "rgba(255, 255, 255, 0.58)";
-  ctx.fillText("Hinamizawa mirror search: Ranked osu!std only. Press Enter to search, Esc to close.", 156, 150);
-
-  drawTextBox(ctx, browserRects.query, app.beatmapQuery, pointer);
-  drawPill(ctx, browserRects.search, "Search", pointer);
-  drawPill(ctx, browserRects.close, "Close", pointer);
-  drawMirrorResults(ctx, app, pointer);
-  drawRemoteDetails(ctx, app, pointer);
-
-  ctx.fillStyle = "rgba(255, 255, 255, 0.62)";
-  ctx.font = "700 15px Helvetica Neue, Arial, sans-serif";
-  ctx.fillText(app.beatmapBrowserStatus, 156, 640, 780);
-  ctx.restore();
-}
-
-function drawTextBox(ctx, rect, value, pointer) {
-  const hover = hitRect(rect, pointer.x, pointer.y);
-  ctx.fillStyle = hover ? "rgba(255, 255, 255, 0.18)" : "rgba(255, 255, 255, 0.12)";
-  roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 8);
-  ctx.fill();
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "800 22px Helvetica Neue, Arial, sans-serif";
-  ctx.fillText(value || "Search beatmaps...", rect.x + 18, rect.y + 34, rect.w - 36);
-}
-
-function drawMirrorResults(ctx, app, pointer) {
-  const x = 156;
-  const y = 236;
-  const w = 620;
-  const rowHeight = 62;
-
-  app.beatmapResults.slice(0, 5).forEach((beatmap, index) => {
-    const row = { x, y: y + index * (rowHeight + 8), w, h: rowHeight };
-    const selected = index === app.selectedRemoteBeatmap;
-    const hover = hitRect(row, pointer.x, pointer.y);
-
-    ctx.fillStyle = selected
-      ? "rgba(255, 104, 205, 0.82)"
-      : hover
-        ? "rgba(255, 255, 255, 0.18)"
-        : "rgba(255, 255, 255, 0.09)";
-    roundRect(ctx, row.x, row.y, row.w, row.h, 8);
-    ctx.fill();
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "800 19px Helvetica Neue, Arial, sans-serif";
-    ctx.fillText(`${beatmap.artist} - ${beatmap.title}`, row.x + 18, row.y + 25, row.w - 36);
-    ctx.font = "700 13px Helvetica Neue, Arial, sans-serif";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
-    ctx.fillText(`mapped by ${beatmap.creator}  //  set ${beatmap.setId}`, row.x + 18, row.y + 47, row.w - 36);
-  });
-}
-
-function drawRemoteDetails(ctx, app, pointer) {
-  const beatmap = app.beatmapResults[app.selectedRemoteBeatmap];
-  const x = 820;
-  const y = 236;
-
-  ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-  roundRect(ctx, x, y, 370, 310, 8);
-  ctx.fill();
-
-  if (!beatmap) {
-    ctx.fillStyle = "rgba(255, 255, 255, 0.58)";
-    ctx.font = "800 20px Helvetica Neue, Arial, sans-serif";
-    ctx.fillText("No beatmap selected", x + 24, y + 44);
-    return;
-  }
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "900 28px Helvetica Neue, Arial, sans-serif";
-  ctx.fillText(beatmap.title, x + 24, y + 48, 320);
-  ctx.font = "800 19px Helvetica Neue, Arial, sans-serif";
-  ctx.fillStyle = "rgba(255, 255, 255, 0.76)";
-  ctx.fillText(beatmap.artist, x + 24, y + 82, 320);
-
-  ctx.font = "700 16px Helvetica Neue, Arial, sans-serif";
-  ctx.fillStyle = "rgba(255, 255, 255, 0.62)";
-  ctx.fillText(`Creator: ${beatmap.creator}`, x + 24, y + 126, 320);
-  ctx.fillText(`Set ID: ${beatmap.setId}`, x + 24, y + 154);
-  ctx.fillText(`Difficulties: ${beatmap.difficultyCount || "unknown"}`, x + 24, y + 182);
-  ctx.fillText(`Stars: ${formatStars(beatmap)}`, x + 24, y + 210);
-  ctx.fillText(`BPM: ${beatmap.bpm ?? "unknown"}`, x + 24, y + 238);
-
-  drawPill(ctx, browserRects.download, "Download .osz", pointer);
-}
-
-function resultIndexAt(x, y) {
-  const startX = 156;
-  const startY = 236;
-  const rowHeight = 62;
-  const gap = 8;
-  if (x < startX || x > startX + 620 || y < startY) {
+function songRowIndexAt(x, y, app) {
+  const startX = LOGICAL_WIDTH - 525;
+  const startY = 105;
+  const rowHeight = 88;
+  const gap = 13;
+  const count = hasRemoteResults(app) ? Math.min(5, app.beatmapResults.length) : songs.length;
+  if (x < startX - 8 || x > startX + 456 || y < startY) {
     return -1;
   }
 
-  const offset = y - startY;
+  const offset = y - startY + app.songScroll;
   const index = Math.floor(offset / (rowHeight + gap));
   const rowY = index * (rowHeight + gap);
-  return index < 5 && offset >= rowY && offset <= rowY + rowHeight ? index : -1;
+  return index < count && offset >= rowY && offset <= rowY + rowHeight ? index : -1;
+}
+
+function hasRemoteResults(app) {
+  return app.beatmapResults.length > 0;
+}
+
+function statusLine(app) {
+  if (app.beatmapBrowserStatus) {
+    return app.beatmapBrowserStatus;
+  }
+  return "Ranked osu!std mirror search";
+}
+
+function formatMods(app) {
+  return Array.from(app.activeMods).join("");
 }
 
 function formatStars(beatmap) {

@@ -82,7 +82,6 @@ function update(dt) {
     logoHover: app.logoHover,
     rawInputEnabled: app.rawInputEnabled,
     rawInputLocked: app.rawInputLocked,
-    beatmapBrowserOpen: app.beatmapBrowserOpen,
     beatmapQuery: app.beatmapQuery,
     beatmapResults: app.beatmapResults.length,
     downloadedBeatmaps: app.downloadedBeatmaps.length,
@@ -133,9 +132,6 @@ canvas.addEventListener("pointerup", async (event) => {
 window.addEventListener("keydown", (event) => {
   if (handleSongSelectKeyDown(event, app)) {
     event.preventDefault();
-    if (!app.beatmapBrowserOpen) {
-      textInput.blurBeatmapSearch();
-    }
   }
 });
 

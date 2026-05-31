@@ -21,7 +21,6 @@ export const app = {
   logoPress: 0,
   rawInputEnabled: false,
   rawInputLocked: false,
-  beatmapBrowserOpen: false,
   beatmapQuery: "Still in my heart",
   beatmapResults: [],
   selectedRemoteBeatmap: 0,
