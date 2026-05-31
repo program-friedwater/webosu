@@ -19,7 +19,22 @@ const app = {
   lastTime: performance.now(),
   songScroll: 0,
   selectedSong: 1,
+  modsOpen: false,
+  activeMods: new Set(),
 };
+
+const bottomButtons = {
+  back: { x: 34, y: LOGICAL_HEIGHT - 65, w: 136, h: 44 },
+  mods: { x: 188, y: LOGICAL_HEIGHT - 65, w: 136, h: 44 },
+  start: { x: LOGICAL_WIDTH - 228, y: LOGICAL_HEIGHT - 69, w: 194, h: 52 },
+};
+
+const modButtons = [
+  { code: "HD", name: "Hidden", x: 72, y: LOGICAL_HEIGHT - 276, w: 118, h: 58 },
+  { code: "HR", name: "Hard Rock", x: 204, y: LOGICAL_HEIGHT - 276, w: 118, h: 58 },
+  { code: "DT", name: "Double Time", x: 336, y: LOGICAL_HEIGHT - 276, w: 118, h: 58 },
+  { code: "FL", name: "Flashlight", x: 468, y: LOGICAL_HEIGHT - 276, w: 118, h: 58 },
+];
 
 const songs = [
   {
@@ -105,6 +120,10 @@ function drawInLogicalSpace(draw) {
 function setScene(scene) {
   app.targetScene = scene;
   app.transition = 1;
+}
+
+function hitRect(rect, x, y) {
+  return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
 }
 
 function updateTransition(dt) {
@@ -246,6 +265,7 @@ function drawSongSelectScene() {
   drawTopBar();
   drawSongList();
   drawSongDetails();
+  drawModsPanel();
   drawBottomBar();
 }
 
@@ -361,23 +381,75 @@ function drawSongDetails() {
 function drawBottomBar() {
   ctx.fillStyle = "rgba(7, 8, 14, 0.66)";
   ctx.fillRect(0, LOGICAL_HEIGHT - 86, LOGICAL_WIDTH, 86);
-  drawPill(34, LOGICAL_HEIGHT - 65, 136, 44, "Back");
-  drawPill(188, LOGICAL_HEIGHT - 65, 136, 44, "Mods");
-  drawPill(LOGICAL_WIDTH - 228, LOGICAL_HEIGHT - 69, 194, 52, "Start");
+  drawPill(bottomButtons.back, "Back");
+  drawPill(bottomButtons.mods, app.activeMods.size > 0 ? `Mods ${formatMods()}` : "Mods", app.modsOpen);
+  drawPill(bottomButtons.start, "Start");
 }
 
-function drawPill(x, y, w, h, label) {
-  const hover = pointer.x >= x && pointer.x <= x + w && pointer.y >= y && pointer.y <= y + h;
-  ctx.fillStyle = hover ? "rgba(255, 119, 211, 0.9)" : "rgba(255, 255, 255, 0.18)";
-  roundRect(x, y, w, h, 8);
+function drawPill(rect, label, active = false) {
+  const hover = hitRect(rect, pointer.x, pointer.y);
+  ctx.fillStyle = active
+    ? "rgba(255, 119, 211, 0.95)"
+    : hover
+      ? "rgba(255, 119, 211, 0.9)"
+      : "rgba(255, 255, 255, 0.18)";
+  roundRect(rect.x, rect.y, rect.w, rect.h, 8);
   ctx.fill();
   ctx.fillStyle = "#ffffff";
   ctx.font = "800 20px Helvetica Neue, Arial, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(label, x + w / 2, y + h / 2 + 1);
+  ctx.fillText(label, rect.x + rect.w / 2, rect.y + rect.h / 2 + 1, rect.w - 18);
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
+}
+
+function drawModsPanel() {
+  if (!app.modsOpen) {
+    return;
+  }
+
+  ctx.save();
+  ctx.fillStyle = "rgba(8, 9, 17, 0.72)";
+  roundRect(42, LOGICAL_HEIGHT - 340, 594, 230, 8);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.94)";
+  ctx.font = "900 28px Helvetica Neue, Arial, sans-serif";
+  ctx.fillText("Mods", 72, LOGICAL_HEIGHT - 294);
+  ctx.font = "600 15px Helvetica Neue, Arial, sans-serif";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.58)";
+  ctx.fillText("Pick modifiers for this song", 72, LOGICAL_HEIGHT - 258);
+
+  modButtons.forEach((mod) => {
+    const active = app.activeMods.has(mod.code);
+    const hover = hitRect(mod, pointer.x, pointer.y);
+    ctx.fillStyle = active
+      ? "rgba(255, 116, 207, 0.86)"
+      : hover
+        ? "rgba(255, 255, 255, 0.22)"
+        : "rgba(255, 255, 255, 0.12)";
+    roundRect(mod.x, mod.y, mod.w, mod.h, 8);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.font = "900 25px Helvetica Neue, Arial, sans-serif";
+    ctx.fillText(mod.code, mod.x + mod.w / 2, mod.y + 28);
+    ctx.font = "700 11px Helvetica Neue, Arial, sans-serif";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
+    ctx.fillText(mod.name, mod.x + mod.w / 2, mod.y + 47);
+    ctx.textAlign = "left";
+  });
+
+  ctx.font = "700 15px Helvetica Neue, Arial, sans-serif";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.64)";
+  ctx.fillText(`Selected: ${formatMods() || "None"}`, 72, LOGICAL_HEIGHT - 148);
+  ctx.restore();
+}
+
+function formatMods() {
+  return Array.from(app.activeMods).join("");
 }
 
 function drawCursor() {
@@ -421,6 +493,12 @@ function roundRect(x, y, w, h, r) {
 function update(dt) {
   app.time += dt;
   updateTransition(dt);
+  window.__mizosuState = {
+    scene: app.scene,
+    modsOpen: app.modsOpen,
+    activeMods: Array.from(app.activeMods),
+    selectedSong: app.selectedSong,
+  };
 }
 
 function draw() {
@@ -479,6 +557,30 @@ canvas.addEventListener("pointerup", (event) => {
   }
 
   if (app.scene === "songSelect") {
+    if (hitRect(bottomButtons.back, pointer.x, pointer.y)) {
+      app.modsOpen = false;
+      setScene("start");
+      return;
+    }
+
+    if (hitRect(bottomButtons.mods, pointer.x, pointer.y)) {
+      app.modsOpen = !app.modsOpen;
+      return;
+    }
+
+    if (app.modsOpen) {
+      for (const mod of modButtons) {
+        if (hitRect(mod, pointer.x, pointer.y)) {
+          if (app.activeMods.has(mod.code)) {
+            app.activeMods.delete(mod.code);
+          } else {
+            app.activeMods.add(mod.code);
+          }
+          return;
+        }
+      }
+    }
+
     const listX = LOGICAL_WIDTH - 525;
     const listY = 105;
     const rowHeight = 88;
