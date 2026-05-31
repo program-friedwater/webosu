@@ -4,7 +4,7 @@ import { drawStableBackground } from "./shared.js";
 export function logoHitTest(x, y) {
   const dx = x - LOGICAL_WIDTH / 2;
   const dy = y - (LOGICAL_HEIGHT / 2 - 12);
-  return Math.hypot(dx, dy) <= 158;
+  return Math.hypot(dx, dy) <= 164;
 }
 
 function logoMetrics(app) {
@@ -14,7 +14,7 @@ function logoMetrics(app) {
   return {
     x: LOGICAL_WIDTH / 2,
     y: LOGICAL_HEIGHT / 2 - 12,
-    radius: 132 + pulse + hover * 22 - press * 9,
+    radius: 138 + pulse + hover * 22 - press * 9,
     hover,
     press,
   };
