@@ -22,7 +22,7 @@ export const app = {
   rawInputEnabled: false,
   rawInputLocked: false,
   beatmapBrowserOpen: false,
-  beatmapQuery: "freedom dive",
+  beatmapQuery: "Still in my heart",
   beatmapResults: [],
   selectedRemoteBeatmap: 0,
   beatmapBrowserStatus: "Mirror: Hinamizawa",

@@ -317,7 +317,7 @@ async function runMirrorSearch(app) {
     app.beatmapResults = await searchMirrorBeatmaps(query);
     app.selectedRemoteBeatmap = 0;
     app.beatmapBrowserStatus = app.beatmapResults.length
-      ? `${app.beatmapResults.length} results from mirror`
+      ? `${app.beatmapResults.length} ranked osu!std results from mirror`
       : "No mirror results";
   } catch (error) {
     app.beatmapResults = [];
@@ -367,7 +367,7 @@ function drawBeatmapBrowser(ctx, app, pointer) {
   ctx.fillText("Get Maps", 156, 132);
   ctx.font = "700 14px Helvetica Neue, Arial, sans-serif";
   ctx.fillStyle = "rgba(255, 255, 255, 0.58)";
-  ctx.fillText("Hinamizawa mirror search. Press Enter to search, Esc to close.", 156, 150);
+  ctx.fillText("Hinamizawa mirror search: Ranked osu!std only. Press Enter to search, Esc to close.", 156, 150);
 
   drawTextBox(ctx, browserRects.query, app.beatmapQuery, pointer);
   drawPill(ctx, browserRects.search, "Search", pointer);

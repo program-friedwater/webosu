@@ -4,8 +4,9 @@ export async function searchMirrorBeatmaps(query) {
   const url = new URL("/api/v1/hinai/search", MIRROR_BASE);
   url.searchParams.set("query", query.trim());
   url.searchParams.set("mode", "0");
+  url.searchParams.set("status", "1");
   url.searchParams.set("amount", "5");
-  url.searchParams.set("sort", "plays_desc");
+  url.searchParams.set("sort", "ranked_desc");
 
   const response = await fetch(url);
   if (!response.ok) {
@@ -51,6 +52,7 @@ function normalizeMirrorResult(result) {
     artist: result.Artist ?? result.artist ?? "Unknown artist",
     creator: result.Creator ?? result.creator ?? "Unknown creator",
     status: String(rankedStatus),
+    mode: 0,
     bpm: Number.isFinite(bpm) ? bpm : undefined,
     difficultyCount: children.length,
     minStars: stars.length ? Math.min(...stars) : undefined,
