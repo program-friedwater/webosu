@@ -17,8 +17,6 @@ const searchControls = {
   search: { x: LOGICAL_WIDTH - 236, y: 20, w: 92, h: 38 },
 };
 
-const detailDownload = { x: 70, y: 374, w: 210, h: 44 };
-
 const modButtons = [
   { code: "HD", name: "Hidden", x: 72, y: LOGICAL_HEIGHT - 276, w: 118, h: 58 },
   { code: "HR", name: "Hard Rock", x: 204, y: LOGICAL_HEIGHT - 276, w: 118, h: 58 },
@@ -63,7 +61,7 @@ export async function handleSongSelectPointerUp(pointer, app, setScene, toggleRa
     return;
   }
 
-  if (hitRect(bottomButtons.download, pointer.x, pointer.y) || hitRect(detailDownload, pointer.x, pointer.y)) {
+  if (hitRect(bottomButtons.download, pointer.x, pointer.y)) {
     await downloadSelectedBeatmap(app);
     return;
   }
@@ -229,7 +227,6 @@ function drawSongDetails(ctx, app, pointer) {
     ctx.fillText(`Difficulties: ${song.difficultyCount || "unknown"}`, x + 28, y + 190);
     ctx.fillText(`Stars: ${formatStars(song)}`, x + 28, y + 218);
     ctx.fillText(`BPM: ${song.bpm ?? "unknown"}`, x + 28, y + 246);
-    drawPill(ctx, detailDownload, "Download .osz", pointer);
   } else {
     ctx.fillText(`mapped by ${song.mapper}`, x + 28, y + 134);
     ctx.fillText(`[${song.version}]`, x + 28, y + 162);
