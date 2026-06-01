@@ -22,8 +22,9 @@ export async function searchMirrorBeatmaps(query) {
 }
 
 export async function downloadMirrorBeatmap(setId) {
-  const url = new URL(`/api/v1/hinai/d/${setId}`, MIRROR_BASE);
-  url.searchParams.set("noVideo", "1");
+  const url = new URL(`/d/${setId}`, MIRROR_BASE);
+  url.searchParams.set("proxy", "true");
+  url.searchParams.set("no_video", "true");
 
   const response = await fetch(url);
   if (!response.ok) {

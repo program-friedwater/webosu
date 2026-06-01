@@ -35,7 +35,7 @@ export function drawSongSelectScene(ctx, app, pointer) {
   drawBottomBar(ctx, app, pointer);
 }
 
-export async function handleSongSelectPointerUp(pointer, app, setScene, toggleRawInput, focusBeatmapSearch) {
+export async function handleSongSelectPointerUp(pointer, app, setScene, toggleRawInput, focusBeatmapSearch, playRemotePreview) {
   if (hitRect(searchControls.query, pointer.x, pointer.y)) {
     focusBeatmapSearch();
     return;
@@ -88,6 +88,7 @@ export async function handleSongSelectPointerUp(pointer, app, setScene, toggleRa
 
   if (hasRemoteResults(app)) {
     app.selectedRemoteBeatmap = resultIndex;
+    await playRemotePreview(app.beatmapResults[resultIndex]);
   } else {
     app.selectedSong = resultIndex;
   }
@@ -362,6 +363,9 @@ function hasRemoteResults(app) {
 }
 
 function statusLine(app) {
+  if (app.previewStatus) {
+    return app.previewStatus;
+  }
   if (app.beatmapBrowserStatus) {
     return app.beatmapBrowserStatus;
   }

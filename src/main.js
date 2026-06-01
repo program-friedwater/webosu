@@ -1,6 +1,7 @@
 import { createInput } from "./systems/input.js";
 import { createRenderer } from "./systems/renderer.js";
 import { createBeatmapTextInput } from "./systems/textInput.js";
+import { createAudioPreview } from "./systems/audioPreview.js";
 import { app, pointer } from "./state.js";
 import { drawStartScene, logoHitTest } from "./scenes/startScene.js";
 import {
@@ -16,6 +17,7 @@ const ctx = canvas.getContext("2d");
 const renderer = createRenderer(canvas, ctx);
 const input = createInput(canvas, pointer, app, renderer);
 const textInput = createBeatmapTextInput(app);
+const audioPreview = createAudioPreview(app);
 
 function setScene(scene) {
   app.targetScene = scene;
@@ -85,6 +87,8 @@ function update(dt) {
     beatmapQuery: app.beatmapQuery,
     beatmapResults: app.beatmapResults.length,
     downloadedBeatmaps: app.downloadedBeatmaps.length,
+    previewingSetId: app.previewingSetId,
+    previewStatus: app.previewStatus,
   };
 }
 
@@ -110,6 +114,7 @@ function frame(now) {
 }
 
 canvas.addEventListener("pointerup", async (event) => {
+  audioPreview.unlock();
   input.updatePointerFromEvent(event);
   pointer.down = false;
 
@@ -125,6 +130,7 @@ canvas.addEventListener("pointerup", async (event) => {
       setScene,
       () => input.toggleRawInput(),
       () => textInput.focusBeatmapSearch(),
+      (beatmap) => audioPreview.playRemoteBeatmap(beatmap),
     );
   }
 });

@@ -26,4 +26,6 @@ export const app = {
   selectedRemoteBeatmap: 0,
   beatmapBrowserStatus: "Mirror: Hinamizawa",
   downloadedBeatmaps: [],
+  previewingSetId: undefined,
+  previewStatus: "",
 };
